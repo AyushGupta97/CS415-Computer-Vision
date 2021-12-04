@@ -80,7 +80,53 @@ class App:
 
                 # Fill in code to compute features in the frame, and append to tracks (Part A)
                 # For dense flow, we will do it at every point.
-                p = cv2.goodFeaturesToTrack(frame_gray, mask=mask, **feature_params)
+                # p = cv2.goodFeaturesToTrack(frame_gray, mask=mask, **feature_params)
+
+                # Algorithm
+                # Find image x and y derivatives, Ix Iy
+                # (Compute directional gradients.)
+                kernel_x = np.array([[-1., 1.], [-1., 1.]])
+                kernel_y = np.array([[-1., -1.], [1., 1.]])
+                kernel_t = np.array([[1., 1.], [1., 1.]])  # *.25
+                w = window_size // 2  # window_size is odd, all the pixels with offset in between [-w, w] are inside the window
+                img0 = img0 / 255.  # normalize pixels
+                img1 = img1 / 255.  # normalize pixels
+                # Implement Lucas Kanade
+                # for each point, calculate I_x, I_y, I_t
+                mode = 'same'
+                fx = signal.convolve2d(img0, kernel_x, boundary='symm', mode=mode)
+                fy = signal.convolve2d(img0, kernel_y, boundary='symm', mode=mode)
+                ft = signal.convolve2d(img1, kernel_t, boundary='symm', mode=mode) + signal.convolve2d(I1g, -kernel_t,
+                                                                                                       boundary='symm',
+                                                                                                   mode=mode)
+
+                u = np.zeros(img0.shape)
+                v = np.zeros(img0.shape)
+                # within window window_size * window_size
+                for i in range(w, img0.shape[0] - w):
+                    for j in range(w, img0.shape[1] - w):
+                        Ix = fx[i - w:i + w + 1, j - w:j + w + 1].flatten()
+                        Iy = fy[i - w:i + w + 1, j - w:j + w + 1].flatten()
+                        It = ft[i - w:i + w + 1, j - w:j + w + 1].flatten()
+
+                        b = np.reshape(It, (It.shape[0], 1))  # get b here
+                        A = np.vstack((Ix, Iy)).T  # get A here
+
+                        if np.min(abs(np.linalg.eigvals(np.matmul(A.T, A)))) >= tau:
+                            nu = np.matmul(np.linalg.pinv(A), b)  # get velocity here
+                            u[i, j] = nu[0]
+                            v[i, j] = nu[1]
+
+                # Select good points
+                for x in range(0, frame_width, 10):
+                    for y in range(0, frame_height, 10):
+                        pt = np.array([y, x])
+                        uv = np.array([u[y, x], v[y, x]]) * 4
+                        pt2 = (pt + uv).astype(np.int)
+                        pt = np.flip(pt)
+                        pt2 = np.flip(pt2)
+                        vis = cv2.arrowedLine(vis, tuple(pt), tuple(pt2), red, 1)
+
                 if p is not None:
                     for x, y in np.float32(p).reshape(-1, 2):
                         self.tracks.append([(x, y)])
