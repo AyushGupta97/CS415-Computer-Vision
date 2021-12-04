@@ -1,18 +1,8 @@
 #!/usr/bin/env python
 
-'''
-Lucas-Kanade tracker
-====================
-Lucas-Kanade sparse optical flow demo. Uses goodFeaturesToTrack
-for track initialization and back-tracking for match verification
-between frames.
-Usage
------
-lk_track.py [<video_source>]
-Keys
-----
-ESC - exit
-'''
+# Dense optical flow
+# Gives the flow vectors of the entire frame (all pixels) - up to one flow vector per pixel
+# Higher accuracy, more expensive computationally
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -82,6 +72,7 @@ class App:
 
             if self.frame_idx % self.detect_interval == 0:  # Every few frames we have to recompute features, this
                 # includes starting frame
+                # creates an image filled with zero intensities
                 mask = np.zeros_like(frame_gray)  # mask to display features
                 mask[:] = 255
                 for x, y in [np.int32(tr[-1]) for tr in self.tracks]:
@@ -89,7 +80,6 @@ class App:
 
                 # Fill in code to compute features in the frame, and append to tracks (Part A)
                 # For dense flow, we will do it at every point.
-                # For sparse flow, Do not worry about the track length here
                 p = cv2.goodFeaturesToTrack(frame_gray, mask=mask, **feature_params)
                 if p is not None:
                     for x, y in np.float32(p).reshape(-1, 2):

@@ -1,21 +1,8 @@
 #!/usr/bin/env python
 
-'''
-Lucas-Kanade tracker
-====================
-Lucas-Kanade sparse optical flow demo. Uses goodFeaturesToTrack
-for track initialization and back-tracking for match verification
-between frames.
-Usage
------
-lk_track.py [<video_source>]
-Keys
-----
-ESC - exit
-'''
-
-# Python 2/3 compatibility
-from __future__ import print_function
+# Lucas-Kanade sparse optical flow
+# Gives the flow vectors of some "interesting" features
+# run with python3 lktrack_sparse.py [video]
 
 import numpy as np
 import cv2
@@ -61,6 +48,7 @@ class App:
                 p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)  # points to track
 
                 # Fill in code for your Optical Flow algorithms here at p0 points (Part B)
+                # cv2.calcOpticalFlowPyrLK -> automatically constructs the image pyramid
                 p1, _st, _err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
                 p0r, _st, _err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
                 d = abs(p0 - p0r).reshape(-1, 2).max(-1)
@@ -72,7 +60,7 @@ class App:
                     if not good_flag:
                         continue
                     tr.append((x, y))
-                    if len(tr) > self.track_len:
+                    if len(tr) > self.track_len: # make sure num features tracked is less than prespecified length
                         del tr[0]
                     new_tracks.append(tr)
                     cv2.circle(vis, (int(x), int(y)), 2, (0, 255, 0), -1)
@@ -88,9 +76,10 @@ class App:
                     cv2.circle(mask, (x, y), 5, 0, -1)
 
                 # Fill in code to compute features in the frame, and append to tracks (Part A)
-                # For dense flow, we will do it at every point.
+                # (compute good features to track every once in a while including the starting frame)
                 # For sparse flow, Do not worry about the track length here
-                p = cv2.goodFeaturesToTrack(frame_gray, mask=mask, **feature_params)
+                p = cv2.goodFeaturesToTrack(frame_gray, mask=mask, **feature_params)  # finds N strongest corners by
+                # Shi-Tomasi method
                 if p is not None:
                     for x, y in np.float32(p).reshape(-1, 2):
                         self.tracks.append([(x, y)])
