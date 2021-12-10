@@ -47,20 +47,24 @@ class App:
                 img0, img1 = self.prev_gray, frame_gray
                 p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)  # points to track
 
-                # Fill in code for your Optical Flow algorithms here at p0 points (Part B)
-                # cv2.calcOpticalFlowPyrLK -> automatically constructs the image pyramid
+                ''' 
+                Fill in code for your Optical Flow algorithms here at p0 points (Part B)
+                automatically construct the image pyramid with cv2.calcOpticalFlowPyrLK 
+                '''
                 p1, _st, _err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
                 p0r, _st, _err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
                 d = abs(p0 - p0r).reshape(-1, 2).max(-1)
-                good = d < 1
+                req = d < 1
 
-                # Fill in code to compute new points to track using the flow (Part C)
+                '''
+                Fill in code to compute new points to track using the flow (Part C)
+                '''
                 new_tracks = []
-                for tr, (x, y), good_flag in zip(self.tracks, p1.reshape(-1, 2), good):
-                    if not good_flag:
+                for tr, (x, y), flag in zip(self.tracks, p1.reshape(-1, 2), req):
+                    if not flag:
                         continue
                     tr.append((x, y))
-                    if len(tr) > self.track_len: # make sure num features tracked is less than prespecified length
+                    if len(tr) > self.track_len:  # make sure num features tracked is less than prespecified length
                         del tr[0]
                     new_tracks.append(tr)
                     cv2.circle(vis, (int(x), int(y)), 2, (0, 255, 0), -1)
@@ -75,11 +79,18 @@ class App:
                 for x, y in [np.int32(tr[-1]) for tr in self.tracks]:
                     cv2.circle(mask, (x, y), 5, 0, -1)
 
-                # Fill in code to compute features in the frame, and append to tracks (Part A)
-                # (compute good features to track every once in a while including the starting frame)
-                # For sparse flow, Do not worry about the track length here
-                p = cv2.goodFeaturesToTrack(frame_gray, mask=mask, **feature_params)  # finds N strongest corners by
-                # Shi-Tomasi method
+                ''' 
+                Fill in code to compute features in the frame, and append to tracks (Part A)
+                (compute good features to track every once in a while including the starting frame)
+                For sparse flow, Do not worry about the track length here
+                '''
+                # Kernels for finding gradients Ix, Iy, It
+                kernel_x = np.array([[-1, 1]])
+                kernel_y = np.array([[-1], [1]])
+                kernel_t = np.array([[1]])
+
+
+
                 if p is not None:
                     for x, y in np.float32(p).reshape(-1, 2):
                         self.tracks.append([(x, y)])
